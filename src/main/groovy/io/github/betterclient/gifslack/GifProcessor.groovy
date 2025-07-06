@@ -56,6 +56,7 @@ class GifProcessor {
         def (rows, cols, tasks) = createTasks(this.time)
         println "Finished parsing gif, uploading."
 
+        println "Generating output text"
         def finalOutputAsString = generateFinalOutputAsString(rows, cols)
 
         app.client.chatPostMessage(
@@ -124,6 +125,7 @@ class GifProcessor {
 
     private def addTasks(rows, cols, String finalOutput, List<AddGifTask> tasks) {
         var index = 0
+        println "Adding tasks to gifQueue..."
         tasks.each {
             GifManager.gifQueue.add(new Closure(it) {
                 @Override
