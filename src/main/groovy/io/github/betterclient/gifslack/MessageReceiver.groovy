@@ -51,7 +51,7 @@ class MessageReceiver {
             if (file == null) {
                 sendToThis(app, event.ts, "Not a gif or internal error.")
             } else {
-                GifProcessor.process(app, file, event.ts)
+                GifProcessor.process(app, file, event.ts, event.text)
             }
         }
     }

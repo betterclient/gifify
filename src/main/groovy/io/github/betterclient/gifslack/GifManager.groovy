@@ -31,6 +31,11 @@ class GifManager {
         return outputMap.get(key)
     }
 
+    static void reset() {
+        encoderMap.clear()
+        outputMap.clear()
+    }
+
     static Stack<Closure> gifQueue = new Stack<>()
 
     static void addGif(String name, byte[] content) {
@@ -93,15 +98,23 @@ class GifManager {
 
             Files.write(tempInput, inputGif)
 
-
-            def pb = new ProcessBuilder(
+            def args = [
                     "D:\\DOWNLOADS\\gifsicle.exe",
                     "--optimize=$optimizationAmount",
                     "--colors", "256",
                     tempInput.toString(),
                     "-o",
                     tempOutput.toString()
-            )
+            ]
+
+            //optimizations
+            if (optimizationAmount > 3) args.add(2, "--lossy=80") //Optimization failed once, enable lossy(risky??) compression
+            if (optimizationAmount > 4) args.set(args.indexOf("256"), "128") //Optimization failed twice(how???), reduce colors even more
+            if (optimizationAmount > 5) args.set(args.indexOf("128"), "64") //Optimization failed three(HOW?????) times, reduce colors even EVEN more
+            if (optimizationAmount > 6) args.addAll(2, ["--scale", "0.5"]) //Optimization failed FOUR(WTF?????????) times, reduce scale
+            //if optimization fails more than this... idk what to do, fuck slack i guess
+
+            def pb = new ProcessBuilder(args)
 
             pb.redirectErrorStream(true)
             def process = pb.start()
