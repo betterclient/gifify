@@ -24,7 +24,8 @@ class MessageReceiver {
 
     static Closure<ChatPostMessageResponse> generate(App app, AppMentionEvent event, EventContext context) {
         return {
-            sendToThis(app, event.ts, "Starting...")
+            sendToThis(app, event.ts, "Downloading your gif...")
+            println "Downloading gif"
 
             File file = null
             event.attachments?.each { itt ->
@@ -51,6 +52,7 @@ class MessageReceiver {
             if (file == null) {
                 sendToThis(app, event.ts, "Not a gif or internal error.")
             } else {
+                println "Download success"
                 GifProcessor.process(app, file, event.ts, event.text)
             }
         }

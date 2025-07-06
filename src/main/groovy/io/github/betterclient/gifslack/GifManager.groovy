@@ -1,6 +1,7 @@
 package io.github.betterclient.gifslack
 
 import com.madgag.gif.fmsware.AnimatedGifEncoder
+import groovy.transform.CompileStatic
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -87,6 +88,7 @@ class GifManager {
         println(resp)
     }
 
+    @CompileStatic
     static byte[] optimizeGifWithGifsicle(byte[] inputGif, int optimizationAmount) {
         println("Optimizing gif with gifsicle...")
         Path tempInput = null
@@ -101,20 +103,21 @@ class GifManager {
             def args = [
                     "D:\\DOWNLOADS\\gifsicle.exe",
                     "--optimize=$optimizationAmount",
-                    "--colors", "256",
+                    "--colors", "1024",
                     tempInput.toString(),
                     "-o",
                     tempOutput.toString()
             ]
 
             //optimizations
-            if (optimizationAmount > 3) args.add(2, "--lossy=80") //Optimization failed once, enable lossy(risky??) compression
-            if (optimizationAmount > 4) args.set(args.indexOf("256"), "128") //Optimization failed twice(how???), reduce colors even more
-            if (optimizationAmount > 5) args.set(args.indexOf("128"), "64") //Optimization failed three(HOW?????) times, reduce colors even EVEN more
+            if (optimizationAmount > 4) args.set(args.indexOf("1024"), "512") //Optimization failed 2 times, reduce colors even more
+            if (optimizationAmount > 3) args.add(2, "--lossy=80") //Optimization failed twice(how???), enable lossy(risky??) compression
+            if (optimizationAmount > 5) args.set(args.indexOf("512"), "256") //Optimization failed three(HOW?????) times, reduce colors even EVEN more
             if (optimizationAmount > 6) args.addAll(2, ["--scale", "0.5"]) //Optimization failed FOUR(WTF?????????) times, reduce scale
             //if optimization fails more than this... idk what to do, fuck slack i guess
+            if (optimizationAmount > 8) throw new RuntimeException("Gif still too large after optimizing 8 times")
 
-            def pb = new ProcessBuilder(args)
+            def pb = new ProcessBuilder(args*.toString())
 
             pb.redirectErrorStream(true)
             def process = pb.start()

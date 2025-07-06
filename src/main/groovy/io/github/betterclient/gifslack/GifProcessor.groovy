@@ -25,7 +25,6 @@ class GifProcessor {
     //CONSTANTS
     static def MAX_IMAGE_SIZE = 1024
     static def MAX_CHUNK_SIZE = 64
-    static def NOTIFY_USER_EVERY_UPLOAD = 10 //notify user every 10 images
     //RANDOM
     private static def RANDOM = new Random()
 
@@ -53,7 +52,9 @@ class GifProcessor {
     }
 
     def execute() {
+        println "Parsing gif..."
         def (rows, cols, tasks) = createTasks(this.time)
+        println "Finished parsing gif, uploading."
 
         def finalOutputAsString = generateFinalOutputAsString(rows, cols)
 
@@ -79,18 +80,10 @@ class GifProcessor {
         int frameCount = decoder.getFrameCount()
 
         def img = scaleDown(decoder.getFrame(0), MAX_IMAGE_SIZE)
-        int origW = img.getWidth()
-        int origH = img.getHeight()
-        int targetW = (int) (((origW + cols - 1) / cols) * cols)
-        double scale = (double) targetW / origW
-        int targetH = (int) Math.round(origH * scale)
-
-        int rows = (int) Math.ceil((double) targetH / (targetH / cols))
-
-        int chunkW = (int) (targetW / cols)
-        int chunkH = (int) (targetH / rows)
+        def (int targetW, int targetH, int chunkH, int chunkW, int rows, int cols) = sizeChunks(img.width, img.height, this.cols)
 
         def tasks = new ArrayList<AddGifTask>()
+        println "Gif contains $frameCount frames"
         for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
             BufferedImage srcFrame = scaleDown(decoder.getFrame(frameIndex), MAX_IMAGE_SIZE)
             int delay = decoder.getDelay(frameIndex)
@@ -100,10 +93,20 @@ class GifProcessor {
             g.drawImage(srcFrame, 0, 0, targetW, targetH, null)
             g.dispose()
 
-            extractFrame(time, chunkH, delay, chunkW, rows, frameCount, frameIndex, tasks, resized)
+            extractFrame(time, chunkH, delay, chunkW, rows, cols, frameCount, frameIndex, tasks, resized)
         }
 
         return [rows, cols, tasks]
+    }
+
+    static def sizeChunks(int origW, int origH, int cols) {
+        int chunkW = (int) Math.ceil((double) origW / cols)
+        int rows = (int) Math.ceil((double) origH / chunkW)
+        int targetW = chunkW * cols
+        int targetH = chunkW * rows
+        int chunkH = chunkW
+
+        return [targetW, targetH, chunkH, chunkW, Math.min(rows, cols * 2), cols]
     }
 
     private def generateFinalOutputAsString(rows, cols) {
@@ -128,8 +131,10 @@ class GifProcessor {
                     it.execute()
                 }
             })
-            if (index % NOTIFY_USER_EVERY_UPLOAD == 0 && index != 0) {
-                def percent = (index * 100) / (rows * cols)
+            if (index % (((rows * cols) - 1) / 10) == 0 && index != 0) {
+                def total = rows * cols
+                def percent = (index * 100) / total
+                final def immutableIndex = index
 
                 GifManager.gifQueue.add(new Closure(it) {
                     @Override
@@ -138,7 +143,7 @@ class GifProcessor {
                         owner0.owner.app.client.chatPostMessage(
                                 ChatPostMessageRequest.builder()
                                         .blocks([
-                                                SectionBlock.builder().text(new PlainTextObject("Still working on your gif. ${percent.toInteger()}% done!", false)).build()
+                                                SectionBlock.builder().text(new PlainTextObject("Still working on your gif. ${percent.toInteger()}% done! ($immutableIndex/$total)", false)).build()
                                         ])
                                         .channel(MessageReceiver.BOT_CHANNEL)
                                         .threadTs(owner0.owner.threadTS)
@@ -155,18 +160,17 @@ class GifProcessor {
             void run() {
                 println(finalOutput)
                 def task = owner as GifProcessor
-                def bloks = [
-                        SectionBlock.builder().text(new PlainTextObject("Your gif is ready!", false)).build(),
-                        DividerBlock.builder().build()
-                ]
-
-                finalOutput.split("\n").each { line ->
-                    bloks.add(SectionBlock.builder().text(new PlainTextObject(line, true)).build())
-                }
+                task.app.client.chatPostMessage(
+                        ChatPostMessageRequest.builder()
+                                .text("Your gif is ready!")
+                                .channel(MessageReceiver.BOT_CHANNEL)
+                                .threadTs(task.threadTS)
+                                .build()
+                )
 
                 task.app.client.chatPostMessage(
                         ChatPostMessageRequest.builder()
-                                .blocks(bloks)
+                                .text(finalOutput)
                                 .channel(MessageReceiver.BOT_CHANNEL)
                                 .threadTs(task.threadTS)
                                 .build()
@@ -175,7 +179,7 @@ class GifProcessor {
         })
     }
 
-    private def extractFrame(long time, int chunkH, int delay, int chunkW, int rows, int frameCount, int frameIndex, ArrayList<AddGifTask> tasks, BufferedImage resized) {
+    private def extractFrame(long time, int chunkH, int delay, int chunkW, int rows, int cols, int frameCount, int frameIndex, ArrayList<AddGifTask> tasks, BufferedImage resized) {
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
                 BufferedImage chunk = resized.getSubimage(x * chunkW, y * chunkH, chunkW, Math.min(chunkH, resized.getHeight() - y * chunkH))
@@ -191,10 +195,14 @@ class GifProcessor {
                     tasks.add(new AddGifTask(this, new Runnable() {
                         @Override
                         void run() {
-                            GifManager.addGif(
-                                    name,
-                                    GifManager.getOutputStreamFor(key).with { it.close(); it }.toByteArray()
-                            )
+                            try {
+                                GifManager.addGif(
+                                        name,
+                                        GifManager.getOutputStreamFor(key).with { it.close(); it }.toByteArray()
+                                )
+                            } catch (ignored) {
+
+                            }
                         }
                     }))
                 }
@@ -222,7 +230,8 @@ class GifProcessor {
         g2d.drawImage(original, 0, 0, newW, newH, null)
         g2d.dispose()
 
-        return to8Bit(scaled)
+        return scaled
+        //return to8Bit(scaled)
     }
 
     static BufferedImage makeSquare(BufferedImage img) {
