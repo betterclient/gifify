@@ -3,6 +3,9 @@ package io.github.betterclient.gifslack
 import com.slack.api.bolt.App
 import com.slack.api.bolt.AppConfig
 import com.slack.api.bolt.socket_mode.SocketModeApp
+import io.github.betterclient.gifslack.emoji.EmojiUploader
+import io.github.betterclient.gifslack.slack.EnvironmentFile
+import io.github.betterclient.gifslack.slack.MessageReceiver
 
 class Main {
     static def environment = new EnvironmentFile()
@@ -16,12 +19,12 @@ class Main {
             return it
         })
 
-        MessageReceiver.register(app)
+        MessageReceiver.register app
         new SocketModeApp(environment["SLACK_APP_TOKEN"], app).startAsync()
         while (true) {
             Thread.sleep(500)
-            if (GifManager.gifQueue.size() > 0) {
-                GifManager.gifQueue.remove(0).run()
+            if (EmojiUploader.emojiQueue.size() > 0) {
+                EmojiUploader.emojiQueue.remove(0).run()
             }
         }
     }
