@@ -1,7 +1,6 @@
 package io.github.betterclient.gifslack
 
 import com.madgag.gif.fmsware.AnimatedGifEncoder
-import com.madgag.gif.fmsware.GifDecoder
 import com.slack.api.bolt.App
 import com.slack.api.methods.request.chat.ChatPostMessageRequest
 import com.slack.api.model.block.ContextBlock
@@ -17,7 +16,7 @@ import java.awt.image.IndexColorModel
 
 class GifProcessor {
     public App app
-    public File inputGif
+    public File input
     public String threadTS
     public int cols
     public long time
@@ -28,15 +27,15 @@ class GifProcessor {
     //RANDOM
     private static def RANDOM = new Random()
 
-    GifProcessor(App app, File inputGif, String threadTS, int cols) {
+    GifProcessor(App app, File input, String threadTS, int cols) {
         this.app = app
-        this.inputGif = inputGif
+        this.input = input
         this.threadTS = threadTS
         this.cols = cols
         this.time = RANDOM.nextLong().abs()
     }
 
-    static void process(App app, File inputGif, String threadTS, String inputText) throws IOException {
+    static void process(App app, File input, String threadTS, String inputText) throws IOException {
         int textCols = 6
         if (inputText.containsIgnoreCase("small")) {
             textCols = 6
@@ -48,13 +47,13 @@ class GifProcessor {
             textCols = 12
         }
 
-        new GifProcessor(app, inputGif, threadTS, textCols).execute()
+        new GifProcessor(app, input, threadTS, textCols).execute()
     }
 
     def execute() {
-        println "Parsing gif..."
+        println "Parsing file..."
         def (rows, cols, tasks) = createTasks(this.time)
-        println "Finished parsing gif, uploading."
+        println "Finished parsing file, uploading."
 
         println "Generating output text"
         def finalOutputAsString = generateFinalOutputAsString(rows, cols)
@@ -62,7 +61,7 @@ class GifProcessor {
         app.client.chatPostMessage(
                 ChatPostMessageRequest.builder()
                         .blocks([
-                                SectionBlock.builder().text(new PlainTextObject("Creating your gif! It should be ready soon!\nWidth: $cols Height: $rows", false)).build(),
+                                SectionBlock.builder().text(new PlainTextObject("Creating your emojis! It should be ready soon!\nWidth: $cols Height: $rows", false)).build(),
                                 DividerBlock.builder().build(),
                                 ContextBlock.builder().elements([new PlainTextObject("Debug: $time", false)]).build()
                         ])
@@ -76,15 +75,26 @@ class GifProcessor {
 
     private def createTasks(long time) {
         GifManager.reset()
-        GifDecoder decoder = new GifDecoder()
-        decoder.read(inputGif.absolutePath)
+        Decoder decoder
+        try {
+            decoder = Decoders.getDecoderForFile(input)
+        } catch (RuntimeException e) {
+            app.client.chatPostMessage(
+                    ChatPostMessageRequest.builder()
+                            .text(e.message)
+                            .channel(MessageReceiver.BOT_CHANNEL)
+                            .threadTs(threadTS)
+                            .build()
+            )
+            throw e
+        }
         int frameCount = decoder.getFrameCount()
 
         def img = scaleDown(decoder.getFrame(0), MAX_IMAGE_SIZE)
         def (int targetW, int targetH, int chunkH, int chunkW, int rows, int cols) = sizeChunks(img.width, img.height, this.cols)
 
         def tasks = new ArrayList<AddGifTask>()
-        println "Gif contains $frameCount frames"
+        println "File contains $frameCount frames"
         for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
             BufferedImage srcFrame = scaleDown(decoder.getFrame(frameIndex), MAX_IMAGE_SIZE)
             int delay = decoder.getDelay(frameIndex)
@@ -318,16 +328,3 @@ class GifProcessor {
     }
 }
 
-class AddGifTask {
-    public GifProcessor owner
-    public Runnable task
-
-    AddGifTask(GifProcessor owner, Runnable task) {
-        this.owner = owner
-        this.task = task
-    }
-
-    void execute() {
-        this.task.run()
-    }
-}

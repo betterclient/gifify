@@ -24,33 +24,33 @@ class MessageReceiver {
 
     static Closure<ChatPostMessageResponse> generate(App app, AppMentionEvent event, EventContext context) {
         return {
-            sendToThis(app, event.ts, "Downloading your gif...")
-            println "Downloading gif"
+            sendToThis(app, event.ts, "Downloading your file...")
+            println "Downloading file"
 
             File file = null
             event.attachments?.each { itt ->
                 def block = itt.blocks[0]
                 if (block instanceof ImageBlock) {
-                    file = downloadFile(block.imageUrl, "work", null)
+                    file = downloadFile(block.imageUrl, "work", null, block.imageUrl.tokenize('.').last().split('\\?')[0])
                 }
             }
             if (file == null) {
                 if (event.files.size() > 0) {
                     def file0 = event.files[0]
 
-                    if (file0.filetype == "gif") {
+                    if (Decoders.supportedFileTypes.contains(file0.filetype)) {
                         def fileInfoResponse = app.client.filesInfo({ req ->
                             req.file(file0.id)
                         })
 
-                        file = downloadFile(fileInfoResponse.file.urlPrivate, "work", context.getBotToken())
+                        file = downloadFile(fileInfoResponse.file.urlPrivate, "work", context.getBotToken(), file0.filetype)
                     }
                 }
             }
 
             //downloaded!!
             if (file == null) {
-                sendToThis(app, event.ts, "Not a gif or internal error.")
+                sendToThis(app, event.ts, "Not a supported file or internal error.")
             } else {
                 println "Download success"
                 GifProcessor.process(app, file, event.ts, event.text)
@@ -62,14 +62,14 @@ class MessageReceiver {
         app.client.chatPostMessage(ChatPostMessageRequest.builder().threadTs(threadTS).text(text).channel(BOT_CHANNEL).build())
     }
 
-    static File downloadFile(String urlStr, String fileName, String token) {
+    static File downloadFile(String urlStr, String fileName, String token, String fileType) {
         def url = new URL(urlStr)
         HttpURLConnection conn = (HttpURLConnection) url.openConnection()
         if (token != null) conn.setRequestProperty("Authorization", "Bearer " + token)
         conn.requestMethod = "GET"
 
         if (conn.responseCode == 200) {
-            var f = File.createTempFile(fileName, ".gif")
+            var f = File.createTempFile(fileName, ".$fileType")
             f.withOutputStream { os ->
                 os << conn.inputStream
             }
