@@ -90,7 +90,7 @@ class GifManager {
 
     @CompileStatic
     static byte[] optimizeGifWithGifsicle(byte[] inputGif, int optimizationAmount) {
-        println("Optimizing gif with gifsicle...")
+        println("Optimizing gif with gifsicle, optimization level: $optimizationAmount...")
         Path tempInput = null
         Path tempOutput = null
 
