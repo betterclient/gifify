@@ -17,7 +17,7 @@ static BufferedImage scaleDown(BufferedImage original, int maxSize) {
         return original
     }
 
-    double scale = Math.min((double) maxSize / width, (double) maxSize / height);
+    double scale = Math.min((double) maxSize / width, (double) maxSize / height)
     int newW = (int) Math.round(width * scale)
     int newH = (int) Math.round(height * scale)
 

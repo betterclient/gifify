@@ -1,6 +1,5 @@
 package io.github.betterclient.gifslack.emoji
 
-
 import groovy.transform.CompileStatic
 import io.github.betterclient.gifslack.Main
 import okhttp3.MediaType

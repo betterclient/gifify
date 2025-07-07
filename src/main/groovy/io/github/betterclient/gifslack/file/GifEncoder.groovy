@@ -3,8 +3,8 @@ package io.github.betterclient.gifslack.file
 import com.madgag.gif.fmsware.AnimatedGifEncoder
 
 class GifEncoder {
-    static Map<String, AnimatedGifEncoder> encoderMap = new HashMap<>();
-    static Map<String, ByteArrayOutputStream> outputMap = new HashMap<>();
+    static Map<String, AnimatedGifEncoder> encoderMap = new HashMap<>()
+    static Map<String, ByteArrayOutputStream> outputMap = new HashMap<>()
 
     static AnimatedGifEncoder getEncoderFor(String key) {
         return encoderMap.computeIfAbsent(key, k -> {

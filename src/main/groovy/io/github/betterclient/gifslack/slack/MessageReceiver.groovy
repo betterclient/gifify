@@ -65,7 +65,7 @@ class MessageReceiver {
     }
 
     static File downloadFile(String urlStr, String fileName, String token, String fileType) {
-        def url = new URL(urlStr)
+        def url = new URI(urlStr).toURL()
         HttpURLConnection conn = (HttpURLConnection) url.openConnection()
         if (token != null) conn.setRequestProperty("Authorization", "Bearer " + token)
         conn.requestMethod = "GET"
