@@ -80,17 +80,16 @@ class EmojiUploader {
             def args = [
                     "D:\\DOWNLOADS\\gifsicle.exe",
                     "--optimize=$optimizationAmount",
-                    "--colors", "1024",
                     tempInput.toString(),
                     "-o",
                     tempOutput.toString()
             ]
 
             //optimizations
-            if (optimizationAmount > 4) args.set(args.indexOf("1024"), "512") //Optimization failed 2 times, reduce colors even more
-            if (optimizationAmount > 3) args.add(2, "--lossy=80") //Optimization failed twice(how???), enable lossy(risky??) compression
-            if (optimizationAmount > 5) args.set(args.indexOf("512"), "256") //Optimization failed three(HOW?????) times, reduce colors even EVEN more
-            if (optimizationAmount > 6) args.addAll(2, ["--scale", "0.5"]) //Optimization failed FOUR(WTF?????????) times, reduce scale
+            if (optimizationAmount > 3) args.addAll(["--colors", "1024"]) //Optimization failed once, reduce colors
+            if (optimizationAmount > 4) args.add(1, "--lossy=80") //Optimization failed twice(how???), enable lossy(risky??) compression
+            if (optimizationAmount > 5) args.set(args.indexOf("1024"), "256") //Optimization failed three(HOW?????) times, reduce colors even more
+            if (optimizationAmount > 6) args.addAll(1, ["--scale", "0.5"]) //Optimization failed FOUR(WTF?????????) times, reduce scale
             //if optimization fails more than this... idk what to do, fuck slack i guess
             if (optimizationAmount > 8) throw new RuntimeException("Gif still too large after optimizing 8 times")
 

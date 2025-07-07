@@ -28,8 +28,8 @@ class EmojiProcessor {
     //CONSTANTS
     static int MAX_IMAGE_SIZE = 1024
     static int MAX_CHUNK_SIZE = 64
-    static int MAX_FRAMES_ALLOWED = 10000
-    static int MAX_FRAMES_ALLOWED_SEC = 166
+    static int MAX_FRAMES_ALLOWED = 20000
+    static int MAX_FRAMES_ALLOWED_SEC = 332
 
     //RANDOM
     private static def RANDOM = new Random()
@@ -65,19 +65,28 @@ class EmojiProcessor {
         println "Generating output text"
         def finalOutputAsString = generateFinalOutputAsString(rows, cols)
 
+        sendInitialMessage(cols, rows)
+
+        addTasks(finalOutputAsString, tasks)
+    }
+
+    def sendInitialMessage(int cols, int rows) {
+        def blocks = [
+                SectionBlock.builder().text(new PlainTextObject("Creating your emojis! It should be ready soon!", false)).build(),
+                DividerBlock.builder().build(),
+                ContextBlock.builder().elements([new PlainTextObject("Debug: $time, Width: $cols Height: $rows", false)]).build()
+        ]
+        if (EmojiUploader.emojiQueue.size() > 0) {
+            blocks.add(1, SectionBlock.builder().text(new PlainTextObject("There are other emojis in line! This may take a bit.", false)).build())
+        }
+
         app.client.chatPostMessage(
                 ChatPostMessageRequest.builder()
-                        .blocks([
-                                SectionBlock.builder().text(new PlainTextObject("Creating your emojis! It should be ready soon!", false)).build(),
-                                DividerBlock.builder().build(),
-                                ContextBlock.builder().elements([new PlainTextObject("Debug: $time, Width: $cols Height: $rows", false)]).build()
-                        ])
+                        .blocks(blocks)
                         .channel(MessageReceiver.BOT_CHANNEL)
                         .threadTs(threadTS)
                         .build()
         )
-
-        addTasks(finalOutputAsString, tasks)
     }
 
     private def createTasks(long time) {
@@ -190,7 +199,7 @@ class EmojiProcessor {
                 EmojiUploader.emojiQueue.add(new Closure(task) {
                     @Override
                     void run() {
-                        if (percent.get() == 9) return
+                        if (percent.get() == 10) return
 
                         def owner0 = (owner as AddEmojiTask)
                         owner0.owner.app.client.chatPostMessage(
@@ -245,12 +254,13 @@ class EmojiProcessor {
                 if (frameIndex == frameCount - 1) {
                     encoder.finish()
                     String name = "zzzzzz_work_gif_${key}_${time}"
+                    byte[] bites = GifEncoder.getOutputStreamFor(key).with { it.close(); it }.toByteArray()
                     tasks.add(new AddEmojiTask(this, new Runnable() {
                         @Override
                         void run() {
                             EmojiUploader.uploadEmoji(
                                     name,
-                                    GifEncoder.getOutputStreamFor(key).with { it.close(); it }.toByteArray()
+                                    bites
                             )
                         }
                     }))

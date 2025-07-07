@@ -1,6 +1,5 @@
 package io.github.betterclient.gifslack.file
 
-import com.madgag.gif.fmsware.AnimatedGifEncoder
 import com.slack.api.bolt.App
 import com.slack.api.methods.request.chat.ChatPostMessageRequest
 import io.github.betterclient.gifslack.emoji.EmojiProcessor
@@ -34,7 +33,7 @@ static BufferedImage scaleDown(BufferedImage original, int maxSize) {
 
 static BufferedImage makeSquare(BufferedImage img) {
     int size = EmojiProcessor.MAX_CHUNK_SIZE
-    BufferedImage stretched = new BufferedImage(size, size, BufferedImage.TYPE_BYTE_INDEXED)
+    BufferedImage stretched = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
     Graphics2D g = stretched.createGraphics()
 
     g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)

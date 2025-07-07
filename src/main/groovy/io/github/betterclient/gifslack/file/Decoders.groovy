@@ -111,50 +111,32 @@ class VideoDecoder implements Decoder {
         grabbery.start()
 
         def frameCount0 = grabbery.lengthInFrames
+        long videoDurationMicros = grabbery.lengthInTime
         if (frameCount0 > EmojiProcessor.MAX_FRAMES_ALLOWED) {
             grabbery.stop()
             grabbery.release()
             throw new RuntimeException("Found $frameCount0 frames, only ${EmojiProcessor.MAX_FRAMES_ALLOWED} frames (${EmojiProcessor.MAX_FRAMES_ALLOWED_SEC} seconds of 60fps) are allowed.")
         }
 
-        List<Long> timestamps = []
-        List<Integer> selectedIndexes = []
-        int actualTarget = Math.min(50, frameCount0)
-        double step = (double) frameCount0 / actualTarget
-        for (int i = 0; i < actualTarget; i++) {
-            selectedIndexes << (int)(i * step)
-        }
+        long stepMicros = (long)(videoDurationMicros / 50)
+        int delayMillis = (int)(stepMicros / 1000)
 
-        int currentIndex = 0
-        int wantedIndex = selectedIndexes[currentIndex]
-        int actualIndex = 0
-        Frame frame
-        while ((frame = grabbery.grabImage()) != null && currentIndex < actualTarget) {
-            if (actualIndex == wantedIndex) {
+        for (int i = 0; i < 50; i++) {
+            long timestamp = i * stepMicros
+            grabbery.setTimestamp(timestamp)
+
+            Frame frame = grabbery.grabImage()
+            if (frame != null) {
                 BufferedImage img = new Java2DFrameConverter().convert(frame)
                 if (img != null) {
                     frames << img
-                    timestamps << frame.timestamp
-                    currentIndex++
-                    if (currentIndex < selectedIndexes.size()) {
-                        wantedIndex = selectedIndexes[currentIndex]
-                    }
+                    delays << (delayMillis > 0 ? delayMillis : 40)
                 }
             }
-            actualIndex++
         }
 
         grabbery.stop()
         grabbery.release()
-
-        for (int i = 0; i < timestamps.size() - 1; i++) {
-            long deltaMicros = timestamps[i + 1] - timestamps[i]
-            int delayMillis = (int) (deltaMicros / 1000)
-            delays << (delayMillis > 0 ? delayMillis : 40)
-        }
-        if (timestamps.size() > 0) {
-            delays << (delays.size() > 0 ? delays.last() : 40)
-        }
 
         if (frameCount0 > 50) {
             reducedMessage = "Your file was reduced from $frameCount0 to 50 frames."
