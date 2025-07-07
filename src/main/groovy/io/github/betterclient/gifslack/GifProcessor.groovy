@@ -70,7 +70,7 @@ class GifProcessor {
                         .build()
         )
 
-        addTasks(rows, cols, finalOutputAsString, tasks)
+        addTasks(finalOutputAsString, tasks)
     }
 
     private def createTasks(long time) {
@@ -125,7 +125,7 @@ class GifProcessor {
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
-                finalOutputAsString += ":work_gif_${x}_${y}_${this.time}:"
+                finalOutputAsString += ":zzzzzz_work_gif_${x}_${y}_${this.time}:"
             }
             finalOutputAsString += "\n"
         }
@@ -133,29 +133,41 @@ class GifProcessor {
         return finalOutputAsString
     }
 
-    private def addTasks(rows, cols, String finalOutput, List<AddGifTask> tasks) {
-        var index = 0
+    private def addTasks(String finalOutput, List<AddGifTask> tasks) {
         println "Adding tasks to gifQueue..."
-        tasks.each {
-            GifManager.gifQueue.add(new Closure(it) {
+        final int totalTasks = tasks.size()
+        final int numMessages = 10
+        if (totalTasks == 0) { return } //guaranteed to never happen, but you can't be too sure
+
+        def messageIndices = new HashSet<Integer>()
+        for (int i = 1; i <= numMessages; i++) {
+            int triggerIndex = Math.round((i * totalTasks) / (float)numMessages) - 1
+            if (triggerIndex >= 0) {
+                messageIndices.add(triggerIndex)
+            }
+        }
+        messageIndices.add(totalTasks - 1)
+
+        tasks.eachWithIndex { task, index ->
+            GifManager.gifQueue.add(new Closure(task) {
                 @Override
                 void run() {
-                    it.execute()
+                    task.execute()
                 }
             })
-            if (index % (((rows * cols) - 1) / 10) == 0 && index != 0) {
-                def total = rows * cols
-                def percent = (index * 100) / total
-                final def immutableIndex = index
 
-                GifManager.gifQueue.add(new Closure(it) {
+            if (index in messageIndices) {
+                def percent = ((index + 1) * 100) / totalTasks
+                final def immutableIndexForMessage = index + 1
+
+                GifManager.gifQueue.add(new Closure(task) {
                     @Override
                     void run() {
                         def owner0 = (owner as AddGifTask)
                         owner0.owner.app.client.chatPostMessage(
                                 ChatPostMessageRequest.builder()
                                         .blocks([
-                                                SectionBlock.builder().text(new PlainTextObject("Still working on your gif. ${percent.toInteger()}% done! ($immutableIndex/$total)", false)).build()
+                                                SectionBlock.builder().text(new PlainTextObject("Still working on your gif. ${percent.toInteger()}% done! ($immutableIndexForMessage/$totalTasks)", false)).build()
                                         ])
                                         .channel(MessageReceiver.BOT_CHANNEL)
                                         .threadTs(owner0.owner.threadTS)
@@ -164,7 +176,6 @@ class GifProcessor {
                     }
                 })
             }
-            index++
         }
 
         GifManager.gifQueue.add(new Closure(this) {
@@ -203,7 +214,7 @@ class GifProcessor {
 
                 if (frameIndex == frameCount - 1) {
                     encoder.finish()
-                    String name = "work_gif_${key}_${time}"
+                    String name = "zzzzzz_work_gif_${key}_${time}"
                     tasks.add(new AddGifTask(this, new Runnable() {
                         @Override
                         void run() {

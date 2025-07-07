@@ -95,9 +95,10 @@ class VideoDecoder implements Decoder {
         Frame frame
         while ((frame = grabbery.grabImage()) != null) {
             if (frames.size() >= 50) {
+                def frames = grabbery.getLengthInFrames()
                 grabbery.stop()
                 grabbery.release()
-                throw new RuntimeException("Sorry! Slack only allows 50 frames.")
+                throw new RuntimeException("Sorry! Slack only allows 50 frames. Found $frames")
             }
 
             BufferedImage img = new Java2DFrameConverter().convert(frame)
