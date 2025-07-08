@@ -86,11 +86,11 @@ class EmojiUploader {
             ]
 
             //optimizations
-            if (optimizationAmount >= 4) args.add(1, "--lossy=80") //Optimization failed once, enable lossy(risky??) compression
-            if (optimizationAmount >= 5) args.addAll(["--colors", "1024"]) //Optimization failed twice(how???), reduce colors
-            if (optimizationAmount >= 6) args.set(args.indexOf("1024"), "256") //Optimization failed three(HOW?????) times, reduce colors even more
-            if (optimizationAmount >= 7) args.addAll(1, ["--scale", "0.5"]) //Optimization failed FOUR(WTF?????????) times, reduce scale
-            if (optimizationAmount >= 8) args.set(args.indexOf("--lossy=80"), "--lossy=100") //Optimization failed FIVE times, maximize loss
+            if (optimizationAmount >= 3) args.add(1, "--lossy=80") //Optimization failed once, enable lossy(risky??) compression
+            if (optimizationAmount >= 4) args.addAll(["--colors", "1024"]) //Optimization failed twice(how???), reduce colors
+            if (optimizationAmount >= 5) args.set(args.indexOf("1024"), "256") //Optimization failed three(HOW?????) times, reduce colors even more
+            if (optimizationAmount >= 6) args.addAll(1, ["--scale", "0.5"]) //Optimization failed FOUR(WTF?????????) times, reduce scale
+            if (optimizationAmount >= 7) args.set(args.indexOf("--lossy=80"), "--lossy=100") //Optimization failed FIVE times, maximize loss
             //if optimization fails more than this... idk what to do, fuck slack i guess
             if (optimizationAmount >= 10) throw new RuntimeException("Gif still too large after optimizing 10 times")
 
