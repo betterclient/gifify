@@ -16,6 +16,7 @@ import io.github.betterclient.gifslack.slack.MessageReceiver
 
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class EmojiProcessor {
@@ -171,6 +172,8 @@ class EmojiProcessor {
 
     private def addTasks(String finalOutput, List<AddEmojiTask> tasks) {
         println "Adding tasks to emojiQueue..."
+        def executionTimes = Collections.synchronizedList(new ArrayList<Long>())
+
         final int totalTasks = tasks.size()
         final int numMessages = 10
         if (totalTasks == 0) { return } //guaranteed to never happen, but you can never be too sure
@@ -189,7 +192,10 @@ class EmojiProcessor {
             EmojiUploader.emojiQueue.add(new Closure(task) {
                 @Override
                 void run() {
+                    long startTime = System.nanoTime()
                     task.execute()
+                    long endTime = System.nanoTime()
+                    executionTimes.add(endTime - startTime)
                 }
             })
 
@@ -201,11 +207,29 @@ class EmojiProcessor {
                     void run() {
                         if (percent.get() == 10) return
 
+                        String timeEstimate = ""
+                        if (!executionTimes.isEmpty()) {
+                            long averageNanos = executionTimes.sum() / executionTimes.size()
+                            int tasksInQueue = EmojiUploader.emojiQueue.size()
+                            long estimatedNanos = tasksInQueue * averageNanos
+                            long remainingSeconds = TimeUnit.NANOSECONDS.toSeconds(estimatedNanos)
+                            if (remainingSeconds > 1) {
+                                long minutes = (remainingSeconds / 60).toLong()
+                                long seconds = remainingSeconds % 60
+                                if (minutes > 0) {
+                                    timeEstimate = " (est. ${minutes}m ${seconds}s remaining)"
+                                } else {
+                                    timeEstimate = " (est. ${seconds}s remaining)"
+                                }
+                            }
+                        }
+
                         def owner0 = (owner as AddEmojiTask)
                         owner0.owner.app.client.chatPostMessage(
                                 ChatPostMessageRequest.builder()
                                         .blocks([
-                                                SectionBlock.builder().text(new PlainTextObject("Still working on your gif. ${percent.getAndAdd(1) * 10}% done! ($immutableIndexForMessage/$totalTasks)", false)).build()
+                                                // Append the time estimate to the message text.
+                                                SectionBlock.builder().text(new PlainTextObject("Still working on your gif. ${percent.getAndAdd(1) * 10}% done! ($immutableIndexForMessage/$totalTasks)${timeEstimate}", false)).build()
                                         ])
                                         .channel(MessageReceiver.BOT_CHANNEL)
                                         .threadTs(owner0.owner.threadTS)
