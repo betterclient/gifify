@@ -127,18 +127,20 @@ class EmojiProcessor {
         }
 
         def img = Utilities.scaleDown(decoder.getFrame(0), MAX_IMAGE_SIZE)
-        def (int targetW, int targetH, int chunkH, int chunkW, int rows, int cols) = sizeChunks(img.width, img.height, this.cols)
+        int thisCols = this.cols
+        def (int targetW, int targetH, int chunkH, int chunkW, int rows, int cols) = sizeChunks(img.width, img.height, thisCols)
         while ((rows * cols) > 200) {
             //too many chunks, will take >20 minutes to upload
+            thisCols -= 2
             app.client.chatPostMessage(
                     ChatPostMessageRequest.builder()
-                            .text("Output too big, reducing size to ${this.cols - 2}.")
+                            .text("Output too big, reducing size to $thisCols.")
                             .channel(MessageReceiver.BOT_CHANNEL)
                             .threadTs(threadTS)
                             .build()
             )
 
-            (targetW, targetH, chunkH, chunkW, rows, cols) = sizeChunks(img.width, img.height, this.cols - 2)
+            (targetW, targetH, chunkH, chunkW, rows, cols) = sizeChunks(img.width, img.height, thisCols)
         }
 
         def tasks = new ArrayList<AddEmojiTask>()
