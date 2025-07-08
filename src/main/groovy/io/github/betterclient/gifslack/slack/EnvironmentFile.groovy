@@ -1,9 +1,16 @@
 package io.github.betterclient.gifslack.slack
 
+import groovy.transform.CompileStatic
+
 import java.nio.charset.Charset
 
 class EnvironmentFile {
     String getAt(String input) {
+        return get(input)
+    }
+
+    @CompileStatic
+    String get(String input) {
         InputStream r = EnvironmentFile.class.getResourceAsStream("/.env")?: new ByteArrayInputStream("N/A".getBytes(Charset.defaultCharset()))
         def str = new String(r.readAllBytes())
         r.close()

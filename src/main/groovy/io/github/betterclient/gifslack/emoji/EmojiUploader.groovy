@@ -76,8 +76,9 @@ class EmojiUploader {
 
             Files.write(tempInput, inputGif)
 
+            String path = Main.environment.get("GIFSICLE_FULL_PATH")
             def args = [
-                    Main.environment["GIFSICLE_FULL_PATH"],
+                    path,
                     "--optimize=$optimizationAmount",
                     tempInput.toString(),
                     "-o",

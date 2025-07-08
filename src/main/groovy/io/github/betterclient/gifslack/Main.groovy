@@ -8,7 +8,7 @@ import io.github.betterclient.gifslack.slack.EnvironmentFile
 import io.github.betterclient.gifslack.slack.MessageReceiver
 
 class Main {
-    static def environment = new EnvironmentFile()
+    static EnvironmentFile environment = new EnvironmentFile()
 
     static void main(args) {
         println 'Launching bot!'
