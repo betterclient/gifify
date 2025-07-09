@@ -1,5 +1,6 @@
 plugins {
     id 'groovy'
+    id 'application'
 }
 
 group = 'io.github.betterclient'
@@ -24,4 +25,8 @@ dependencies {
 
     implementation 'org.bytedeco:javacv-platform:1.5.10'
     implementation 'org.bytedeco:ffmpeg-platform:6.1-1.5.10'
+}
+
+application {
+    mainClass = 'io.github.betterclient.gifslack.Main'
 }
