@@ -24,7 +24,7 @@ class EmojiProcessor {
     public File input
     public String threadTS
     public int cols
-    public long time
+    public String identifier
 
     //CONSTANTS
     static int MAX_IMAGE_SIZE = 1024
@@ -35,12 +35,12 @@ class EmojiProcessor {
     //RANDOM
     private static def RANDOM = new Random()
 
-    EmojiProcessor(App app, File input, String threadTS, int cols) {
+    EmojiProcessor(App app, File input, String threadTS, int cols, String name) {
         this.app = app
         this.input = input
         this.threadTS = threadTS
         this.cols = cols
-        this.time = RANDOM.nextLong().abs()
+        this.identifier = "${name}_${UUID.randomUUID().toString().substring(0, 4)}"
     }
 
     static void process(App app, File input, String threadTS, String inputText) throws IOException {
@@ -55,12 +55,29 @@ class EmojiProcessor {
             textCols = 12
         }
 
-        new EmojiProcessor(app, input, threadTS, textCols).execute()
+        String name = inputText.replace("small", "")
+                .replace("medium", "")
+                .replace("large", "")
+                .replace("massive", "")
+                .replaceAll("<@U[A-Z0-9]+>", "") //Thanks for the regex, Copilot! (mentions)
+                .replaceAll("<#C[A-Z0-9]+>", "") //channels
+                .replaceAll("[^a-zA-Z0-9_]", "") //no illegal emoji names
+                .trim()
+                .replace(" ", "_")
+                .toLowerCase()
+
+        if (name.isEmpty()) {
+            name = "${RANDOM.nextInt()}"
+        } else if (name.length() > 16) {
+            name = name.substring(0, 16)
+        }
+
+        new EmojiProcessor(app, input, threadTS, textCols, name).execute()
     }
 
     def execute() {
         println "Parsing file..."
-        def (rows, cols, tasks) = createTasks(this.time)
+        def (rows, cols, tasks) = createTasks()
         println "Finished parsing file, uploading."
 
         println "Generating output text"
@@ -75,8 +92,9 @@ class EmojiProcessor {
         def blocks = [
                 SectionBlock.builder().text(new PlainTextObject("Creating your emojis! It should be ready soon!", false)).build(),
                 DividerBlock.builder().build(),
-                ContextBlock.builder().elements([new PlainTextObject("Debug: $time, Width: $cols Height: $rows", false)]).build()
+                ContextBlock.builder().elements([new PlainTextObject("Identifier ${this.identifier}, Width: $cols, Height: $rows", false)]).build()
         ]
+
         if (EmojiUploader.emojiQueue.size() > 0) {
             blocks.add(1, SectionBlock.builder().text(new PlainTextObject("There are other emojis in line! This may take a bit.", false)).build())
         }
@@ -90,7 +108,7 @@ class EmojiProcessor {
         )
     }
 
-    private def createTasks(long time) {
+    private def createTasks() {
         GifEncoder.reset()
         Decoder decoder
         try {
@@ -155,7 +173,7 @@ class EmojiProcessor {
             g.drawImage(srcFrame, 0, 0, targetW, targetH, null)
             g.dispose()
 
-            extractFrame(time, chunkH, delay, chunkW, rows, cols, frameCount, frameIndex, tasks, resized)
+            extractFrame(chunkH, delay, chunkW, rows, cols, frameCount, frameIndex, tasks, resized)
         }
 
         return [rows, cols, tasks]
@@ -176,7 +194,7 @@ class EmojiProcessor {
 
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
-                finalOutputAsString += ":zzzzzz_work_gif_${x}_${y}_${this.time}:"
+                finalOutputAsString += ":zzwork_gifify_${x}_${y}_${this.identifier}:"
             }
             finalOutputAsString += "\n"
         }
@@ -279,7 +297,7 @@ class EmojiProcessor {
         })
     }
 
-    private def extractFrame(long time, int chunkH, int delay, int chunkW, int rows, int cols, int frameCount, int frameIndex, ArrayList<AddEmojiTask> tasks, BufferedImage resized) {
+    private def extractFrame(int chunkH, int delay, int chunkW, int rows, int cols, int frameCount, int frameIndex, ArrayList<AddEmojiTask> tasks, BufferedImage resized) {
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
                 BufferedImage chunk = resized.getSubimage(x * chunkW, y * chunkH, chunkW, Math.min(chunkH, resized.getHeight() - y * chunkH))
@@ -291,7 +309,7 @@ class EmojiProcessor {
 
                 if (frameIndex == frameCount - 1) {
                     encoder.finish()
-                    String name = "zzzzzz_work_gif_${key}_${time}"
+                    String name = "zzwork_gifify_${key}_${this.identifier}"
                     byte[] bites = GifEncoder.getOutputStreamFor(key).with { it.close(); it }.toByteArray()
                     tasks.add(new AddEmojiTask(this, new Runnable() {
                         @Override

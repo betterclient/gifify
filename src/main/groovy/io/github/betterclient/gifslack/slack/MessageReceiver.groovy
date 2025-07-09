@@ -10,7 +10,7 @@ import io.github.betterclient.gifslack.file.Decoders
 import io.github.betterclient.gifslack.emoji.EmojiProcessor
 
 class MessageReceiver {
-    static final String BOT_CHANNEL = "C0943TNEFLP"
+    static final String BOT_CHANNEL = "C095D9V3W81"
 
     static void register(App app) {
         app.event(AppMentionEvent.class, { payload, context ->
